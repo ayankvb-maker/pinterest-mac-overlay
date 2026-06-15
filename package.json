@@ -1,0 +1,32 @@
+{
+  "name": "pinterest-overlay",
+  "version": "1.0.0",
+  "description": "Floating Pinterest Overlay",
+  "main": "main.js",
+  "author": "Ayan",
+  "license": "ISC",
+
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "pack": "electron-builder --dir"
+  },
+
+  "devDependencies": {
+    "electron": "42.4.0",
+    "electron-builder": "^26.0.12"
+  },
+
+  "build": {
+  "appId": "com.ayan.pinterestoverlay",
+  "productName": "Pinterest Overlay",
+
+  "directories": {
+    "output": "dist"
+  },
+
+  "win": {
+    "target": "nsis"
+  }
+}
+}
