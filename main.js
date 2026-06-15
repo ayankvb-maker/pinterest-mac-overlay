@@ -6,9 +6,9 @@ let collapseButton;
 let lastBounds;
 let isCollapsed = false;
 let dragOffset = null;
+let isQuitting = false;
 
 function applyMacOverlayBehavior(win) {
-
   if (process.platform !== "darwin") return;
   if (!win || win.isDestroyed()) return;
 
@@ -17,7 +17,6 @@ function applyMacOverlayBehavior(win) {
 }
 
 function positionCollapseButton() {
-
   if (!collapseButton || collapseButton.isDestroyed()) return;
   if (!overlayWindow || overlayWindow.isDestroyed()) return;
 
@@ -32,7 +31,6 @@ function positionCollapseButton() {
 }
 
 function showOverlay() {
-
   if (!overlayWindow || overlayWindow.isDestroyed()) return;
   if (!dotWindow || dotWindow.isDestroyed()) return;
 
@@ -57,7 +55,6 @@ function showOverlay() {
 }
 
 function showDot() {
-
   if (!overlayWindow || overlayWindow.isDestroyed()) return;
   if (!dotWindow || dotWindow.isDestroyed()) return;
 
@@ -89,8 +86,20 @@ function showDot() {
   isCollapsed = true;
 }
 
-function createOverlay() {
+function closeEverything() {
+  if (isQuitting) return;
+  isQuitting = true;
 
+  for (const win of [collapseButton, dotWindow, overlayWindow]) {
+    if (win && !win.isDestroyed()) {
+      win.destroy();
+    }
+  }
+
+  app.quit();
+}
+
+function createOverlay() {
   overlayWindow = new BrowserWindow({
     width: 500,
     height: 700,
@@ -105,27 +114,25 @@ function createOverlay() {
   lastBounds = overlayWindow.getBounds();
 
   overlayWindow.on("resize", () => {
-
     if (!isCollapsed) {
       lastBounds = overlayWindow.getBounds();
     }
-
     positionCollapseButton();
-
   });
 
   overlayWindow.on("move", () => {
-
     if (!isCollapsed) {
       lastBounds = overlayWindow.getBounds();
     }
-
     positionCollapseButton();
+  });
 
+  // Closing the overlay window closes the whole app, including the dot
+  overlayWindow.on("close", () => {
+    closeEverything();
   });
 
   overlayWindow.webContents.setWindowOpenHandler(({ url }) => {
-
     const popup = new BrowserWindow({
       width: 500,
       height: 700,
@@ -137,14 +144,12 @@ function createOverlay() {
     return {
       action: "deny"
     };
-
   });
 
   overlayWindow.loadURL("https://www.pinterest.com");
 }
 
 function createCollapseButton() {
-
   collapseButton = new BrowserWindow({
     width: 20,
     height: 20,
@@ -204,7 +209,6 @@ document.getElementById('dot').addEventListener('click', () => {
 }
 
 function createDot() {
-
   dotWindow = new BrowserWindow({
     width: 25,
     height: 25,
@@ -260,18 +264,13 @@ let dragged = false;
 const el = document.getElementById('clickCatcher');
 
 el.addEventListener('mousedown', (e) => {
-
   dragged = false;
-
   downX = e.screenX;
   downY = e.screenY;
-
   ipcRenderer.send('dot-drag-start');
-
 });
 
 el.addEventListener('mousemove', (e) => {
-
   if (downX === undefined) return;
 
   if (
@@ -288,11 +287,9 @@ el.addEventListener('mousemove', (e) => {
       e.screenY
     );
   }
-
 });
 
 window.addEventListener('mouseup', () => {
-
   if (!dragged && downX !== undefined) {
     ipcRenderer.send('dot-clicked');
   }
@@ -301,7 +298,6 @@ window.addEventListener('mouseup', () => {
   downY = undefined;
 
   ipcRenderer.send('dot-drag-end');
-
 });
 </script>
 </body>
@@ -313,31 +309,23 @@ window.addEventListener('mouseup', () => {
 }
 
 ipcMain.on("dot-drag-start", () => {
-
   const [winX, winY] = dotWindow.getPosition();
-
   const cursor = screen.getCursorScreenPoint();
 
   dragOffset = {
     dx: cursor.x - winX,
     dy: cursor.y - winY
   };
-
 });
 
-ipcMain.on(
-  "dot-drag-move",
-  (event, screenX, screenY) => {
+ipcMain.on("dot-drag-move", (event, screenX, screenY) => {
+  if (!dragOffset) return;
 
-    if (!dragOffset) return;
-
-    dotWindow.setPosition(
-      screenX - dragOffset.dx,
-      screenY - dragOffset.dy
-    );
-
-  }
-);
+  dotWindow.setPosition(
+    screenX - dragOffset.dx,
+    screenY - dragOffset.dy
+  );
+});
 
 ipcMain.on("dot-drag-end", () => {
   dragOffset = null;
@@ -352,7 +340,6 @@ ipcMain.on("collapse-overlay", () => {
 });
 
 app.whenReady().then(() => {
-
   if (process.platform === "darwin") {
     app.dock.hide();
   }
@@ -363,9 +350,12 @@ app.whenReady().then(() => {
 
   positionCollapseButton();
   collapseButton.show();
-
 });
 
 app.on("window-all-closed", () => {
   app.quit();
+});
+
+app.on("before-quit", () => {
+  isQuitting = true;
 });
