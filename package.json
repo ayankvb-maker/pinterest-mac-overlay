@@ -18,15 +18,20 @@
   },
 
   "build": {
-  "appId": "com.ayan.pinterestoverlay",
-  "productName": "Pinterest Overlay",
+    "appId": "com.ayan.pinterestoverlay",
+    "productName": "Pinterest Overlay",
 
-  "directories": {
-    "output": "dist"
-  },
+    "directories": {
+      "output": "dist"
+    },
 
-  "win": {
-    "target": "nsis"
+    "win": {
+      "target": "nsis"
+    },
+
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    }
   }
-}
 }
